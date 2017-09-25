@@ -32,6 +32,7 @@
         'sale',
         'stock',
         'purchase',
+        'product_variant_configurator',
     ],
     'external_dependencies': {
         'python': [
@@ -45,9 +46,12 @@
         'views/inherit_product_product.xml',
         'views/inherit_product_supplier_info.xml',
         'views/inherit_product_attribute_value.xml',
+        'views/inherit_product_attribute_price.xml',
         'views/inherit_sale_order.xml',
         'views/inherit_purchase_order.xml',
-	'security/ir.model.access.csv',
+        'views/inherit_stock_move.xml',
+        'views/inherit_stock_picking.xml',
+        'security/ir.model.access.csv',
     ],
     'qweb': [
         'static/src/xml/*.xml',

@@ -26,16 +26,81 @@ from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
 from openerp.tools.translate import _
 from openerp import models, fields, api, SUPERUSER_ID
 from openerp.exceptions import ValidationError
+import logging
+_logger = logging.getLogger(__name__)
 
 
 class procurement_order(models.Model):
     _inherit = 'procurement.order'
 
-    # FIXME: Mejor usar atributos
-    manzano_width = fields.Float(string="Width", required=False)
-    manzano_height = fields.Float(string="Height", required=False)
+    origin_width = fields.Float(string="Width", required=False)
+    origin_height = fields.Float(string="Height", required=False)
 
-    # BREAK INHERITANCE!!
+    @api.model
+    def _run_move_create(self, procurement):
+        res = super(procurement_order, self)._run_move_create(procurement)
+        width = 0
+        height = 0
+        if procurement.origin_width:
+            width = procurement.origin_width
+        if procurement.origin_height:
+            height = procurement.origin_height
+        res.update({
+            'origin_width': width,
+            'origin_height': height
+        })
+        return res
+
+    @api.multi
+    def _prepare_purchase_order_line(self, po, supplier):
+        self.ensure_one()
+        res = super(procurement_order, self)._prepare_purchase_order_line(po=po, supplier=supplier)
+
+        product_id = self.product_id.with_context(
+            width=self.origin_width,
+            height=self.origin_height
+        )
+
+        procurement_uom_po_qty = self.env['product.uom']._compute_qty_obj(self.product_uom, self.product_qty, self.product_id.uom_po_id)
+        seller = product_id._select_seller(
+            product_id,
+            partner_id=supplier.name,
+            quantity=procurement_uom_po_qty,
+            date=po.date_order and po.date_order[:10],
+            uom_id=self.product_id.uom_po_id)
+
+        if seller:
+            seller = seller.with_context(
+                width=self.origin_width,
+                height=self.origin_height,
+                product_id=product_id
+            )
+
+        taxes = product_id.supplier_taxes_id
+        fpos = po.fiscal_position_id
+        taxes_id = fpos.map_tax(taxes) if fpos else taxes
+        if taxes_id:
+            taxes_id = taxes_id.filtered(lambda x: x.company_id.id == self.company_id.id)
+
+        name = res['name']
+        if product_id.sale_price_type in ['table_2d', 'area']:
+            name += ' [Width:%.2f cms x Height:%.2f cms]' % (self.origin_width, self.origin_height)
+        elif product_id.sale_price_type == 'table_1d':
+            name += ' [ Width:%.2f cms]' % (self.origin_width)
+
+        price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price()[seller.id], product_id.supplier_taxes_id, taxes_id) if seller else 0.0
+        if price_unit and seller and po.currency_id and seller.currency_id != po.currency_id:
+            price_unit = seller.currency_id.compute(price_unit, po.currency_id)
+
+        res.update({
+            'name': name,
+            'price_unit': price_unit,
+            'origin_width': self.origin_width,
+            'origin_height': self.origin_height
+        })
+
+        return res
+
     @api.multi
     def make_po(self):
         cache = {}
@@ -87,10 +152,10 @@ class procurement_order(models.Model):
             po_line = False
             for line in po.order_line:
                 product_id = procurement.product_id.with_context(
-                    width=line.manzano_width,
-                    height=line.manzano_height
+                    width=line.origin_width,
+                    height=line.origin_height
                 )
-                if line.product_id == product_id and line.product_uom == procurement.product_id.uom_po_id and line.manzano_width == procurement.manzano_width and line.manzano_height == procurement.manzano_height:
+                if line.product_id == product_id and line.product_uom == procurement.product_id.uom_po_id and line.origin_width == procurement.origin_width and line.origin_height == procurement.origin_height:
                     procurement_uom_po_qty = self.env['product.uom']._compute_qty_obj(procurement.product_uom, procurement.product_qty, product_id.uom_po_id)
                     seller = self.product_id._select_seller(
                         product_id,
@@ -101,8 +166,8 @@ class procurement_order(models.Model):
 
                     if seller:
                         seller = seller.with_context(
-                            width=line.manzano_width,
-                            height=line.manzano_height,
+                            width=line.origin_width,
+                            height=line.origin_height,
                             product_id=product_id
                         )
 
@@ -121,50 +186,3 @@ class procurement_order(models.Model):
                 self.env['purchase.order.line'].create(vals)
         return res
 
-    @api.multi
-    def _prepare_purchase_order_line(self, po, supplier):
-        self.ensure_one()
-        res = super(procurement_order, self)._prepare_purchase_order_line(po=po, supplier=supplier)
-
-        product_id = self.product_id.with_context(
-            width=self.manzano_width,
-            height=self.manzano_height
-        )
-
-        procurement_uom_po_qty = self.env['product.uom']._compute_qty_obj(self.product_uom, self.product_qty, self.product_id.uom_po_id)
-        seller = product_id._select_seller(
-            product_id,
-            partner_id=supplier.name,
-            quantity=procurement_uom_po_qty,
-            date=po.date_order and po.date_order[:10],
-            uom_id=self.product_id.uom_po_id)
-
-        if seller:
-            seller = seller.with_context(
-                width=self.manzano_width,
-                height=self.manzano_height,
-                product_id=product_id
-            )
-
-        taxes = product_id.supplier_taxes_id
-        fpos = po.fiscal_position_id
-        taxes_id = fpos.map_tax(taxes) if fpos else taxes
-        if taxes_id:
-            taxes_id = taxes_id.filtered(lambda x: x.company_id.id == self.company_id.id)
-
-        name = res['name']
-        if product_id.sale_price_type != 'standard':
-            name += ' [%dx%d]' % (self.manzano_width, self.manzano_height)
-
-        price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price()[seller.id], product_id.supplier_taxes_id, taxes_id) if seller else 0.0
-        if price_unit and seller and po.currency_id and seller.currency_id != po.currency_id:
-            price_unit = seller.currency_id.compute(price_unit, po.currency_id)
-
-        res.update({
-            'name': name,
-            'price_unit': price_unit,
-            'manzano_width': self.manzano_width,
-            'manzano_height': self.manzano_height
-        })
-
-        return res

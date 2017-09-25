@@ -23,6 +23,8 @@
 from openerp import models, fields, api
 import openerp.addons.decimal_precision as dp
 from .consts import PRICE_TYPES
+import logging
+_logger = logging.getLogger(__name__)
 
 
 class product_supplier_info(models.Model):
@@ -40,6 +42,8 @@ class product_supplier_info(models.Model):
                     continue
                 price_extra += variant_id.price_extra
             supplier.price_extra_perc = price_extra
+            _logger.info('S1111111')
+            _logger.info(supplier.price_extra_perc)
 
     @api.depends('attribute_value_ids')
     def _get_price_extra(self):
@@ -53,6 +57,8 @@ class product_supplier_info(models.Model):
                     continue
                 price_extra += variant_id.price_extra
             supplier.price_extra = price_extra
+            _logger.info('S22222')
+            _logger.info(supplier.price_extra)
 
     price_area_min_width = fields.Float(string="Min. Width", default=0.0, digits=dp.get_precision('Product Price'))
     price_area_max_width = fields.Float(string="Max. Width", default=0.0, digits=dp.get_precision('Product Price'))
@@ -87,13 +93,12 @@ class product_supplier_info(models.Model):
         })
         return result
 
-    # TODO: Estos metodos necesitarán ser reescritos cuando se usen los atributos
-    def manzano_check_dim_values(self, width, height):
+    def origin_check_dim_values(self, width, height):
         if self.price_type in ['table_1d', 'table_2d']:
             product_prices_table_obj = self.env['product.prices_table']
-            norm_width = self.manzano_normalize_width_value(width)
+            norm_width = self.origin_normalize_width_value(width)
             if self.price_type == 'table_2d':
-                norm_height = self.manzano_normalize_height_value(height)
+                norm_height = self.origin_normalize_height_value(height)
                 return product_prices_table_obj.search_count([('supplier_product_id', '=', self.id),
                                                               ('pos_x', '=', norm_width),
                                                               ('pos_y', '=', norm_height),
@@ -105,7 +110,7 @@ class product_supplier_info(models.Model):
             return width >= self.price_area_min_width and width <= self.price_area_max_width and height >= self.price_area_min_height and height <= self.price_area_max_height
         return True
 
-    def manzano_normalize_width_value(self, width):
+    def origin_normalize_width_value(self, width):
         headers = self.get_price_table_headers()
         norm_val = width
         for index in range(len(headers['x'])-1):
@@ -113,7 +118,7 @@ class product_supplier_info(models.Model):
                 norm_val = headers['x'][index+1]
         return norm_val
 
-    def manzano_normalize_height_value(self, height):
+    def origin_normalize_height_value(self, height):
         headers = self.get_price_table_headers()
         norm_val = height
         for index in range(len(headers['y'])-1):
@@ -123,41 +128,39 @@ class product_supplier_info(models.Model):
 
     @api.depends('price')
     def get_supplier_price(self):
-        # FIXME: Mejor usar atributos
-        manzano_width = self.env.context and self.env.context.get('width') or False
-        manzano_height = self.env.context and self.env.context.get('height') or False
+        origin_width = self.env.context and self.env.context.get('width') or False
+        origin_height = self.env.context and self.env.context.get('height') or False
         product_id = self.env.context and self.env.context.get('product_id') or False
 
         result = {}
         for record in self:
             result[record.id] = False
-            if manzano_width and manzano_height:
+            if origin_width:
                 product_prices_table_obj = self.env['product.prices_table']
-                manzano_width = record.manzano_normalize_width_value(manzano_width)
+                origin_width = record.origin_normalize_width_value(origin_width)
                 if record.price_type == 'table_2d':
-                    manzano_height = record.manzano_normalize_height_value(manzano_height)
+                    origin_height = record.origin_normalize_height_value(origin_height)
                     res = product_prices_table_obj.search([
                         ('supplier_product_id', '=', record.id),
-                        ('pos_x', '=', manzano_width),
-                        ('pos_y', '=', manzano_height)
+                        ('pos_x', '=', origin_width),
+                        ('pos_y', '=', origin_height)
                     ], limit=1)
                     result[record.id] = res and res.value or False
                 elif record.price_type == 'table_1d':
                     res = product_prices_table_obj.search([
                         ('supplier_product_id', '=', record.id),
-                        ('pos_x', '=', manzano_width)
+                        ('pos_x', '=', origin_width)
                     ], limit=1)
                     result[record.id] = res and res.value or False
                 elif record.price_type == 'area':
-                    result[record.id] = record.price * manzano_width * manzano_height
+                    result[record.id] = record.price * origin_width * origin_height
                     result[record.id] = max(record.min_price_area, result[record.id])
             if not result[record.id]:
                 result[record.id] = record.price
-            result[record.id] += record.with_context(product_id=product_id).price_extra + record.with_context(product_id=product_id).price_extra_perc
+            result[record.id] += (result[record.id] * record.with_context(product_id=product_id).price_extra_perc) /100
+            result[record.id] += record.with_context(product_id=product_id).price_extra
         return result
-    # ---
 
-    # -- START Original source by 'Prev. Manzano Dev.'
     @api.multi
     def action_open_value_extras(self):
         self.ensure_one()
@@ -180,4 +183,3 @@ class product_supplier_info(models.Model):
         result = self.product_tmpl_id._get_act_window_dict(
             'price_dimension.supplier_attribute_value_action')
         return result
-    # -- END

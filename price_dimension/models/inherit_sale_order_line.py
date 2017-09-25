@@ -20,41 +20,50 @@
 #
 ##############################################################################
 
-from openerp import models, fields, api
+from openerp import models, fields, api, exceptions
 from openerp.exceptions import ValidationError
 from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
 from openerp.tools.translate import _
+import logging
+_logger = logging.getLogger(__name__)
 
+from .consts import PRICE_TYPES
 
 class sale_order_line(models.Model):
     _inherit = 'sale.order.line'
 
-    # FIXME: Mejor usar atributos
-    manzano_width = fields.Float(string="Width", required=False)
-    manzano_height = fields.Float(string="Height", required=False)
+    origin_width = fields.Float(string="Width", required=False)
+    origin_height = fields.Float(string="Height", required=False)
+    product_price_type = fields.Selection(PRICE_TYPES,string='Sale Price Type',related='product_tmpl_id.sale_price_type')
 
-    @api.constrains('manzano_width')
-    def _check_manzano_width(self):
+    @api.constrains('origin_width')
+    def _check_origin_width(self):
         for record in self:
-            if not record.product_id.manzano_check_sale_dim_values(record.manzano_width, record.manzano_height)[0]:
+            if not record.product_id.origin_check_sale_dim_values(record.origin_width, record.origin_height)[0]:
                 raise ValidationError("Invalid width!")
 
-    @api.constrains('manzano_height')
-    def _check_manzano_height(self):
+    @api.constrains('origin_height')
+    def _check_origin_height(self):
         for record in self:
-            if not record.product_id.manzano_check_sale_dim_values(record.manzano_width, record.manzano_height)[0]:
+            if not record.product_id.origin_check_sale_dim_values(record.origin_width, record.origin_height)[0]:
                 raise ValidationError("Invalid height!")
 
-    @api.onchange('product_id', 'manzano_width', 'manzano_height')
+    @api.onchange('product_id', 'origin_width', 'origin_height','product_attribute_ids', 'product_attribute_ids.value_id')
     def product_id_change(self):
         super(sale_order_line, self).product_id_change()
-
-        if not self.product_id:
+        product_tmp = False
+        if not self.product_tmpl_id or (self.product_id and self.product_id.product_tmpl_id.id != self.product_id.product_tmpl_id.id):
             return
-
-        if self.manzano_height != 0 and self.manzano_width != 0 and not self.product_id.manzano_check_sale_dim_values(self.manzano_width, self.manzano_height)[0]:
-            raise ValidationError(_("Invalid Dimensions!"))
-
+        if self.can_create_product:
+            try:
+                with self.env.cr.savepoint():
+                    product_tmp = self.product_id = self.create_variant_if_needed()
+            except exceptions.ValidationError as e:
+                _logger.exception('Product not created!')
+                return {'warning': {
+                    'title': _('Product not created!'),
+                    'message': e.name,
+                }}
         vals = {}
         product = self.product_id.with_context(
             lang=self.order_id.partner_id.lang,
@@ -64,20 +73,39 @@ class sale_order_line(models.Model):
             pricelist=self.order_id.pricelist_id.id,
             uom=self.product_uom.id,
 
-            width=self.manzano_width,
-            height=self.manzano_height
+            width=self.origin_width,
+            height=self.origin_height
         )
 
-        name = product.name_get()[0][1]
-        if product.sale_price_type != 'standard':
-            name += ' [%dx%d]' % (self.manzano_width, self.manzano_height)
+        if product.sale_price_type in ['table_2d', 'area'] and self.origin_height != 0 and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, self.origin_height)[0]:
+            raise ValidationError(_("Invalid Dimensions!"))
+        elif product.sale_price_type == 'table_1d' and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, 0)[0]:
+            raise ValidationError(_("Invalid Dimensions!"))
+
+        if self.product_tmpl_id.sale_price_type not in ['table_1d','table_2d', 'area']:
+            self.origin_height = self.origin_width = 0
+        name=''
+        if self.product_id:
+            name = product.name_get()[0][1]
+        if product.sale_price_type in ['table_2d', 'area']:
+            height_uom = product.height_uom.name
+            width_uom = product.width_uom.name
+            name += _(' [Width:%.2f %s x Height:%.2f %s]') % (self.origin_width, width_uom, self.origin_height, height_uom)
+        elif product.sale_price_type == 'table_1d':
+            width_uom = product.width_uom.name
+            name += _(' [ Width:%.2f %s]') % (self.origin_width, width_uom)
         if product.description_sale:
             name += '\n' + product.description_sale
         vals['name'] = name
 
         if self.order_id.pricelist_id and self.order_id.partner_id:
             vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
+
+        #~ if product_tmp:
+            #~ self.product_id = False
+            #~ product_tmp.unlink()
         self.update(vals)
+
 
     def product_uom_change(self):
         super(sale_order_line, self).product_uom_change()
@@ -94,8 +122,8 @@ class sale_order_line(models.Model):
                 uom=self.product_uom.id,
                 fiscal_position=self.env.context.get('fiscal_position'),
 
-                width=self.manzano_width,
-                height=self.manzano_height
+                width=self.origin_width,
+                height=self.origin_height
             )
             self.price_unit = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
 
@@ -104,12 +132,11 @@ class sale_order_line(models.Model):
         self.ensure_one()
         vals = super(sale_order_line, self)._prepare_order_line_procurement(group_id=group_id)
         vals.update({
-            'manzano_width': self.manzano_width,
-            'manzano_height': self.manzano_height
+            'origin_width': self.origin_width,
+            'origin_height': self.origin_height
         })
         return vals
 
-    # BREAK INHERITANCE!!
     @api.multi
     def _action_procurement_create(self):
         """
@@ -126,11 +153,11 @@ class sale_order_line(models.Model):
                 qty += proc.product_qty
             if float_compare(qty, line.product_uom_qty, precision_digits=precision) >= 0:
                 continue
- 
+
             if not line.order_id.procurement_group_id:
                 vals = line.order_id._prepare_procurement_group()
                 line.order_id.procurement_group_id = self.env["procurement.group"].create(vals)
- 
+
             vals = line._prepare_order_line_procurement(
                 group_id=line.order_id.procurement_group_id.id)
             vals['product_qty'] = line.product_uom_qty - qty
@@ -139,16 +166,8 @@ class sale_order_line(models.Model):
                 ).create(vals)
             # Do one by one because need pass specific context values
             new_proc.with_context(
-                width=line.manzano_width,
-                height=line.manzano_height).run()
+                width=line.origin_width,
+                height=line.origin_height).run()
             new_procs += new_proc
         return new_procs
 
-#     def product_id_change(self):
-#         res = super(sale_order_line, self).product_id_change()
-# 
-#         vals = {}
-#         if self.order_id.pricelist_id and self.order_id.partner_id:
-#             vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
-#         self.update(vals)
-#         return res

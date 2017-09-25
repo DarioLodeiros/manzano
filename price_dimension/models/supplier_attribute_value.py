@@ -21,14 +21,13 @@
 ##############################################################################
 
 from openerp import models, fields, api
-import openerp.addons.decimal_precision as dp 
+import openerp.addons.decimal_precision as dp
 from .consts import EXTRA_PRICE_TYPES
 
 
 class supplier_attribute_value(models.Model):
     _name = 'supplier.attribute.value'
 
-    # -- START Original source by 'Prev. Manzano Dev.'
     supplierinfo_id = fields.Many2one(comodel_name='product.supplierinfo')
     value = fields.Many2one(
         comodel_name='product.attribute.value',
@@ -40,7 +39,6 @@ class supplier_attribute_value(models.Model):
         string='Supplier Price Extra',
         digits_compute=dp.get_precision('Product Price'),
         default=0.0)
-    # -- END
 
     price_extra_type = fields.Selection(EXTRA_PRICE_TYPES,
                                         string='Price Extra Type',

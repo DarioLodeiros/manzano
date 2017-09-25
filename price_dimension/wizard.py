@@ -71,19 +71,19 @@ class Wizard_Multi_Dimension_Table(models.TransientModel):
     def _generate_commands_from_xls_book(self, mode, book):
         fs = book.sheet_by_index(0)
         rows = range(1, fs.nrows)
-        cols = range(mode == 'table_1d' and 0 or 1, fs.ncols)
+        cols = range(0 if mode == 'table_1d' else 1, fs.ncols)
         cmds = []
-        for y in cols:
-            for x in rows:
-                cell = fs.cell(x, y)
-                cellHL = fs.cell(x, 0)
-                cellHT = fs.cell(0, y)
+        for x in cols:
+            for y in rows:
+                cell = fs.cell(y, x)
+                cellHL = fs.cell(0, x)
+                cellHT = fs.cell(y, 0)
                 cmds.append((
                     0,
                     False,
                     {
-                        'pos_x': cellHT.value,
-                        'pos_y': cellHL.value,
+                        'pos_x': cellHL.value,
+                        'pos_y': cellHT.value,
                         'value': cell.value
                     }
                 ))

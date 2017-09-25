@@ -23,17 +23,18 @@
 from openerp.osv import fields, osv
 
 
-class stock_move(osv.osv):
-    _inherit = 'stock.move'
+class stock_quant(osv.osv):
+    _inherit = 'stock.quant'
 
     _columns = {
     'origin_width': fields.float(string="Width", required=False),
     'origin_height': fields.float(string="Height", required=False)
     }
-    def _prepare_procurement_from_move(self, cr, uid, move, context=None):
-            res = super(stock_move, self)._prepare_procurement_from_move(cr, uid, move, context=context)
-            res.update({
-                'origin_width': context.get('width', 0),
-                'origin_height': context.get('height', 0)
-            })
-            return res
+
+    #~ def _prepare_procurement_from_move(self, cr, uid, move, context=None):
+            #~ res = super(stock_move, self)._prepare_procurement_from_move(cr, uid, move, context=context)
+            #~ res.update({
+                #~ 'origin_width': context.get('width', 0),
+                #~ 'origin_height': context.get('height', 0)
+            #~ })
+            #~ return res
