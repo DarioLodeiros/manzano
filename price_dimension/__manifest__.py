@@ -33,6 +33,7 @@
         'stock',
         'purchase',
         'product_variant_configurator',
+        'sale_order_variant_mgmt',
     ],
     'external_dependencies': {
         'python': [

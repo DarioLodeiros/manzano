@@ -21,8 +21,7 @@
 ##############################################################################
 
 import odoo
-from odoo import models, api, tools, SUPERUSER_ID
-from odoo.osv import osv, fields, expression
+from odoo import models, fields, api, tools, SUPERUSER_ID
 from odoo.exceptions import UserError
 from odoo.tools.translate import _
 from .consts import EXTRA_PRICE_TYPES
@@ -41,5 +40,5 @@ class product_attribute_value(models.Model):
     price_extra_type = fields.Selection(EXTRA_PRICE_TYPES,
                                         string='Price Extra Type',
                                         required=True,
-                                        default='standard'),
-    supplier_ids = fields.Many2many('product.supplierinfo', id1='att_id', id2='prod_id', string='Variants', readonly=True),
+                                        default='standard')
+    supplier_ids = fields.Many2many('product.supplierinfo', id1='att_id', id2='prod_id', string='Variants', readonly=True)

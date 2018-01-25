@@ -26,7 +26,7 @@ from odoo import models, fields
 class stock_quant(models.Model):
     _inherit = 'stock.quant'
 
-    origin_width = fields.Float(string="Width", required=False),
+    origin_width = fields.Float(string="Width", required=False)
     origin_height = fields.Float(string="Height", required=False)
 
     #~ def _prepare_procurement_from_move(self, cr, uid, move, context=None):
