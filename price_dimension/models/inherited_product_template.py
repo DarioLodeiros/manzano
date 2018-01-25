@@ -49,54 +49,51 @@ class product_template(models.Model):
                                         'sale_product_tmpl_id',
                                         string="Sale Prices Table")
 
-    def get_sale_price(self, context=False):
-        result = dict.fromkeys(self._ids, False)
-
+    def get_sale_price(self):
         origin_width = context and context.get('width') or False
         origin_height = context and context.get('height') or False
 
-        for product in self:
-            result[product.id] = False
-            _logger.info("111111111")
-            if origin_width:
-                product_prices_table_obj = self.env['product.prices_table']
-                origin_width = self.origin_normalize_sale_width_value(product.id, origin_width, context=context)
-                if product.sale_price_type == 'table_2d':
-                    origin_height = self.origin_normalize_sale_height_value(product.id, origin_height, context=context)
-                    res = product_prices_table_obj.search_read([
-                        ('sale_product_tmpl_id', '=', product.product_tmpl_id.id),
-                        ('pos_x', '=', origin_width),
-                        ('pos_y', '=', origin_height)
-                    ], limit=1, context=context)
-                    result[product.id] = res and res[0]['value'] or False
-                elif product.sale_price_type == 'table_1d':
-                    res = product_prices_table_obj.search_read([
-                        ('sale_product_tmpl_id', '=', product.product_tmpl_id.id),
-                        ('pos_x', '=', origin_width)
-                    ], limit=1, context=context)
-                    result[product.id] = res and res[0]['value'] or False
-                elif product.sale_price_type == 'area':
-                    result[product.id] = product.list_price * origin_width * origin_height
-                    result[product.id] = max(product.sale_min_price_area, result[product.id])
-            if not result[product.id]:
-                result[product.id] = product.list_price
+        result = False
+        if origin_width:
+            product_prices_table_obj = self.env['product.prices_table']
+            origin_width = self.origin_normalize_sale_width_value(self.id, origin_width)
+            if self.sale_price_type == 'table_2d':
+                origin_height = self.origin_normalize_sale_height_value(self.id, origin_height)
+                res = product_prices_table_obj.search([
+                    ('sale_product_tmpl_id', '=', self.product_tmpl_id.id),
+                    ('pos_x', '=', origin_width),
+                    ('pos_y', '=', origin_height)
+                ], limit=1)
+                result = res and res.value or False
+            elif self.sale_price_type == 'table_1d':
+                res = product_prices_table_obj.search([
+                    ('sale_product_tmpl_id', '=', self.product_tmpl_id.id),
+                    ('pos_x', '=', origin_width)
+                ], limit=1)
+                result = res and res.value or False
+            elif self.sale_price_type == 'area':
+                result = self.list_price * origin_width * origin_height
+                result = max(self.sale_min_price_area, result)
+        if not result:
+            result = self.list_price
         return result
 
     @api.model
-    def _price_get(self, products, ptype='list_price', context=None):
+    def _price_get(self, products, ptype='list_price'):
         if context is None:
             context = {}
 
         res = super(product_template, self)._price_get(products,
-                                                       ptype=ptype,
-                                                       context=context)
+                                                       ptype=ptype)
+        _logger.info("OASA KKK")
+        _logger.info(res)
         product_uom_obj = self.env['product.uom']
         for product in products:
             # standard_price field can only be seen by users in base.group_user
             # Thus, in order to compute the sale price from the cost for users not in this group
             # We fetch the standard price as the superuser
             if ptype != 'standard_price':
-                res[product.id] = product.get_sale_price(context=context)[product.id]
+                res[product.id] = product.get_sale_price()
             else:
                 company_id = context.get('force_company') or product.env.user.company_id.id
                 product = product.with_context(force_company=company_id)
@@ -109,12 +106,13 @@ class product_template(models.Model):
                 res[product.id] = product_uom_obj._compute_price(
                         uom.id, res[product.id], context['uom'])
             # Convert from current user company currency to asked one
-            if 'currency_id' in context:
+            if self._context.get('currency_id'):
                 # Take current user company currency.
                 # This is right cause a field cannot be in more than one currency
-                res[product.id] = self.env['res.currency'].compute(product.currency_id.id,
-                    context['currency_id'], res[product.id], context=context)
-            _logger.info("22222222")
+                res[product.id] = self.env['res.currency'].compute(
+                    product.currency_id.id,
+                    self._context.get('currency_id'),
+                    res[product.id])
         return res
 
     def origin_check_sale_dim_values(self, width, height):

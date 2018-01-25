@@ -105,9 +105,9 @@ class purchase_order_line(models.Model):
             height=self.origin_height
         )
 
-        if product.sale_price_type in ['table_2d', 'area'] and self.origin_height != 0 and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, self.origin_height)[0]:
+        if product.sale_price_type in ['table_2d', 'area'] and self.origin_height != 0 and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, self.origin_height):
             raise ValidationError(_("Invalid Dimensions!"))
-        elif product.sale_price_type == 'table_1d' and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, 0)[0]:
+        elif product.sale_price_type == 'table_1d' and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, 0):
             raise ValidationError(_("Invalid Dimensions!"))
 
         if self.product_tmpl_id.sale_price_type not in ['table_1d','table_2d', 'area']:
@@ -179,7 +179,7 @@ class purchase_order_line(models.Model):
             product_id=product
         )
 
-        price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price()[seller.id], product.supplier_taxes_id, self.taxes_id) if seller else 0.0
+        price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price(), product.supplier_taxes_id, self.taxes_id) if seller else 0.0
         _logger.info('S5555555555555')
         _logger.info(price_unit)
         if price_unit and seller and self.order_id.currency_id and seller.currency_id != self.order_id.currency_id:

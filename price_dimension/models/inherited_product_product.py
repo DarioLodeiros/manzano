@@ -30,9 +30,9 @@ _logger = logging.getLogger(__name__)
 class product_product(models.Model):
     _inherit = 'product.product'
 
-    @api.depends('attribute_value_ids')
-    def _get_price_extra(self):
-        result = super(product_product, self)._get_price_extra()
+    @api.depends('attribute_value_ids.price_ids.price_extra', 'attribute_value_ids.price_ids.product_tmpl_id')
+    def _compute_product_price_extra(self):
+        super(product_product, self)._compute_product_price_extra()
         for product in self:
             price_extra = 0.0
             for variant_id in product.attribute_value_ids:
@@ -41,8 +41,7 @@ class product_product(models.Model):
                 for price_id in variant_id.price_ids:
                     if price_id.product_tmpl_id.id == product.product_tmpl_id.id:
                         price_extra += price_id.price_extra
-            result[product.id] = price_extra
-        return result
+            product.price_extra = price_extra
 
     @api.model
     def origin_check_sale_dim_values(self, width, height):
@@ -80,15 +79,15 @@ class product_product(models.Model):
                 norm_val = headers['y'][index+1]
         return norm_val
 
-    @api.depends('attribute_value_ids.price_ids.price_extra', 'attribute_value_ids.price_ids.product_tmpl_id')
-    def _compute_lst_price(self):
-        res = super(product_product, self)._compute_lst_price()
+    @api.depends('list_price', 'price_extra')
+    def _compute_product_lst_price(self):
+        res = super(product_product, self)._compute_product_lst_price()
         product_uom_obj = self.env['product.uom']
         if 'uom' in self._context:
             to_uom = self.env['product.uom'].browse([self._context['uom']])
         for product in self:
             if to_uom:
-                price = product.uom_id._compute_price(product.list_price, to_uom)
+                price = product.uom_id._compute_price(product.get_sale_price(), to_uom)
             else:
                 price = product.list_price
             price += (price * product.price_extra_perc) / 100.0
@@ -149,8 +148,7 @@ class product_product(models.Model):
             result = self.list_price
         return result
 
-    def _get_price_extra_percentage(self):
-        result = False
+    def _compute_price_extra_percentage(self):
         for product in self:
             price_extra = 0.0
             for variant_id in product.attribute_value_ids:
@@ -159,10 +157,6 @@ class product_product(models.Model):
                 for price_id in variant_id.price_ids:
                     if price_id.product_tmpl_id.id == product.product_tmpl_id.id:
                         price_extra += price_id.price_extra
-            result = price_extra
-        return result
+            product.price_extra_perc = price_extra
 
-    price_extra = fields.Float(compute=_get_price_extra, string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits=dp.get_precision('Product Price'))
-    lst_price = fields.Float(compute=_compute_lst_price, inverse=_set_product_lst_price, string='Sale Price', digits=dp.get_precision('Product Price'))
-
-    price_extra_perc = fields.Float(compute=_get_price_extra_percentage, string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits=dp.get_precision('Product Price'))
+    price_extra_perc = fields.Float(compute=_compute_price_extra_percentage, string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits=dp.get_precision('Product Price'))

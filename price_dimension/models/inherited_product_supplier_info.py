@@ -31,7 +31,7 @@ class product_supplier_info(models.Model):
     _inherit = 'product.supplierinfo'
 
     @api.depends('attribute_value_ids')
-    def _get_price_extra_percentage(self):
+    def _compute_price_extra_percentage(self):
         product_id = self.env.context and self.env.context.get('product_id') or False
         for supplier in self:
             price_extra = 0.0
@@ -44,7 +44,7 @@ class product_supplier_info(models.Model):
             supplier.price_extra_perc = price_extra
 
     @api.depends('attribute_value_ids')
-    def _get_price_extra(self):
+    def _compute_price_extra(self):
         product_id = self.env.context and self.env.context.get('product_id') or False
         for supplier in self:
             price_extra = 0.0
@@ -75,8 +75,8 @@ class product_supplier_info(models.Model):
         inverse_name='supplierinfo_id'
     )
 
-    price_extra = fields.Float(compute='_get_price_extra', string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits=dp.get_precision('Product Price'))
-    price_extra_perc = fields.Float(compute='_get_price_extra_percentage', string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits=dp.get_precision('Product Price'))
+    price_extra = fields.Float(compute='_compute_price_extra', string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits=dp.get_precision('Product Price'))
+    price_extra_perc = fields.Float(compute='_compute_price_extra_percentage', string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits=dp.get_precision('Product Price'))
 
     def get_price_table_headers(self):
         result = {'x': [0], 'y': [0]}
@@ -128,33 +128,31 @@ class product_supplier_info(models.Model):
         origin_height = self.env.context and self.env.context.get('height') or False
         product_id = self.env.context and self.env.context.get('product_id') or False
 
-        result = {}
-        for record in self:
-            result[record.id] = False
-            if origin_width:
-                product_prices_table_obj = self.env['product.prices_table']
-                origin_width = record.origin_normalize_width_value(origin_width)
-                if record.price_type == 'table_2d':
-                    origin_height = record.origin_normalize_height_value(origin_height)
-                    res = product_prices_table_obj.search([
-                        ('supplier_product_id', '=', record.id),
-                        ('pos_x', '=', origin_width),
-                        ('pos_y', '=', origin_height)
-                    ], limit=1)
-                    result[record.id] = res and res.value or False
-                elif record.price_type == 'table_1d':
-                    res = product_prices_table_obj.search([
-                        ('supplier_product_id', '=', record.id),
-                        ('pos_x', '=', origin_width)
-                    ], limit=1)
-                    result[record.id] = res and res.value or False
-                elif record.price_type == 'area':
-                    result[record.id] = record.price * origin_width * origin_height
-                    result[record.id] = max(record.min_price_area, result[record.id])
-            if not result[record.id]:
-                result[record.id] = record.price
-            result[record.id] += (result[record.id] * record.with_context(product_id=product_id).price_extra_perc) /100
-            result[record.id] += record.with_context(product_id=product_id).price_extra
+        result = False
+        if origin_width:
+            product_prices_table_obj = self.env['product.prices_table']
+            origin_width = self.origin_normalize_width_value(origin_width)
+            if self.price_type == 'table_2d':
+                origin_height = self.origin_normalize_height_value(origin_height)
+                res = product_prices_table_obj.search([
+                    ('supplier_product_id', '=', self.id),
+                    ('pos_x', '=', origin_width),
+                    ('pos_y', '=', origin_height)
+                ], limit=1)
+                result = res and res.value or False
+            elif self.price_type == 'table_1d':
+                res = product_prices_table_obj.search([
+                    ('supplier_product_id', '=', self.id),
+                    ('pos_x', '=', origin_width)
+                ], limit=1)
+                result = res and res.value or False
+            elif self.price_type == 'area':
+                result = self.price * origin_width * origin_height
+                result = max(self.min_price_area, result)
+        if not result:
+            result = self.price
+        result += (result * self.with_context(product_id=product_id).price_extra_perc) /100
+        result += self.with_context(product_id=product_id).price_extra
         return result
 
     @api.multi

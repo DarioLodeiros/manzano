@@ -39,13 +39,13 @@ class sale_order_line(models.Model):
     @api.constrains('origin_width')
     def _check_origin_width(self):
         for record in self:
-            if not record.product_id.origin_check_sale_dim_values(record.origin_width, record.origin_height)[0]:
+            if not record.product_id.origin_check_sale_dim_values(record.origin_width, record.origin_height):
                 raise ValidationError("Invalid width!")
 
     @api.constrains('origin_height')
     def _check_origin_height(self):
         for record in self:
-            if not record.product_id.origin_check_sale_dim_values(record.origin_width, record.origin_height)[0]:
+            if not record.product_id.origin_check_sale_dim_values(record.origin_width, record.origin_height):
                 raise ValidationError("Invalid height!")
 
     @api.onchange('product_id', 'origin_width', 'origin_height','product_attribute_ids', 'product_attribute_ids.value_id')
@@ -77,14 +77,14 @@ class sale_order_line(models.Model):
             height=self.origin_height
         )
 
-        if product.sale_price_type in ['table_2d', 'area'] and self.origin_height != 0 and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, self.origin_height)[0]:
+        if product.sale_price_type in ['table_2d', 'area'] and self.origin_height != 0 and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, self.origin_height):
             raise ValidationError(_("Invalid Dimensions!"))
-        elif product.sale_price_type == 'table_1d' and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, 0)[0]:
+        elif product.sale_price_type == 'table_1d' and self.origin_width != 0 and not self.product_id.origin_check_sale_dim_values(self.origin_width, 0):
             raise ValidationError(_("Invalid Dimensions!"))
 
         if self.product_tmpl_id.sale_price_type not in ['table_1d','table_2d', 'area']:
             self.origin_height = self.origin_width = 0
-        name=''
+        name = ''
         if self.product_id:
             name = product.name_get()[0][1]
         if product.sale_price_type in ['table_2d', 'area']:
@@ -99,7 +99,7 @@ class sale_order_line(models.Model):
         vals['name'] = name
 
         if self.order_id.pricelist_id and self.order_id.partner_id:
-            vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.price, product.taxes_id, self.tax_id)
+            vals['price_unit'] = self.env['account.tax']._fix_tax_included_price(product.lst_price, product.taxes_id, self.tax_id)
 
         #~ if product_tmp:
             #~ self.product_id = False

@@ -88,7 +88,7 @@ class procurement_order(models.Model):
         elif product_id.sale_price_type == 'table_1d':
             name += ' [ Width:%.2f cms]' % (self.origin_width)
 
-        price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price()[seller.id], product_id.supplier_taxes_id, taxes_id) if seller else 0.0
+        price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price(), product_id.supplier_taxes_id, taxes_id) if seller else 0.0
         if price_unit and seller and po.currency_id and seller.currency_id != po.currency_id:
             price_unit = seller.currency_id.compute(price_unit, po.currency_id)
 
@@ -171,7 +171,7 @@ class procurement_order(models.Model):
                             product_id=product_id
                         )
 
-                    price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price()[seller.id], line.product_id.supplier_taxes_id, line.taxes_id) if seller else 0.0
+                    price_unit = self.env['account.tax']._fix_tax_included_price(seller.get_supplier_price(), line.product_id.supplier_taxes_id, line.taxes_id) if seller else 0.0
                     if price_unit and seller and po.currency_id and seller.currency_id != po.currency_id:
                         price_unit = seller.currency_id.compute(price_unit, po.currency_id)
 
