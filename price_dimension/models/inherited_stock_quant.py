@@ -20,16 +20,14 @@
 #
 ##############################################################################
 
-from openerp.osv import fields, osv
+from odoo import models, fields
 
 
-class stock_quant(osv.osv):
+class stock_quant(models.Model):
     _inherit = 'stock.quant'
 
-    _columns = {
-    'origin_width': fields.float(string="Width", required=False),
-    'origin_height': fields.float(string="Height", required=False)
-    }
+    origin_width = fields.Float(string="Width", required=False),
+    origin_height = fields.Float(string="Height", required=False)
 
     #~ def _prepare_procurement_from_move(self, cr, uid, move, context=None):
             #~ res = super(stock_move, self)._prepare_procurement_from_move(cr, uid, move, context=context)

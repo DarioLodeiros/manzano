@@ -23,4 +23,6 @@
     ],
     'demo': [
     ],
+
+    'installable': False,
 }

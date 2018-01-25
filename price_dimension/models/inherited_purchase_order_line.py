@@ -21,11 +21,11 @@
 ##############################################################################
 
 from datetime import datetime
-from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
-from openerp.tools.translate import _
-from openerp import models, fields, api, SUPERUSER_ID, exceptions
-from openerp.exceptions import ValidationError
-from openerp.tools.translate import _
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
+from odoo.tools.translate import _
+from odoo import models, fields, api, SUPERUSER_ID, exceptions
+from odoo.exceptions import ValidationError
+from odoo.tools.translate import _
 from .consts import PRICE_TYPES
 import logging
 _logger = logging.getLogger(__name__)

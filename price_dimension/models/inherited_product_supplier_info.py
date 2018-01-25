@@ -20,8 +20,8 @@
 #
 ##############################################################################
 
-from openerp import models, fields, api
-import openerp.addons.decimal_precision as dp
+from odoo import models, fields, api
+import odoo.addons.decimal_precision as dp
 from .consts import PRICE_TYPES
 import logging
 _logger = logging.getLogger(__name__)
@@ -42,8 +42,6 @@ class product_supplier_info(models.Model):
                     continue
                 price_extra += variant_id.price_extra
             supplier.price_extra_perc = price_extra
-            _logger.info('S1111111')
-            _logger.info(supplier.price_extra_perc)
 
     @api.depends('attribute_value_ids')
     def _get_price_extra(self):
@@ -57,8 +55,6 @@ class product_supplier_info(models.Model):
                     continue
                 price_extra += variant_id.price_extra
             supplier.price_extra = price_extra
-            _logger.info('S22222')
-            _logger.info(supplier.price_extra)
 
     price_area_min_width = fields.Float(string="Min. Width", default=0.0, digits=dp.get_precision('Product Price'))
     price_area_max_width = fields.Float(string="Max. Width", default=0.0, digits=dp.get_precision('Product Price'))

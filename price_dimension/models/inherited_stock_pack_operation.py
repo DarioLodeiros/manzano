@@ -22,10 +22,10 @@
 
 from psycopg2 import OperationalError
 from datetime import datetime
-from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
-from openerp.tools.translate import _
-from openerp import models, fields, api, SUPERUSER_ID
-from openerp.exceptions import ValidationError
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
+from odoo.tools.translate import _
+from odoo import models, fields, api, SUPERUSER_ID
+from odoo.exceptions import ValidationError
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -50,4 +50,3 @@ class stock_pack_operation(models.Model):
                 #~ _logger.info(move.move_id.origin_width)
                 #~ r.origin_height = move.move_id.origin_height
                 #~ r.origin_width = move.move_id.origin_width
-

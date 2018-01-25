@@ -20,28 +20,26 @@
 #
 ##############################################################################
 
-import openerp
-from openerp import api, tools, SUPERUSER_ID
-from openerp.osv import osv, fields, expression
-from openerp.exceptions import UserError
-from openerp.tools.translate import _
+import odoo
+from odoo import models, api, tools, SUPERUSER_ID
+from odoo.osv import osv, fields, expression
+from odoo.exceptions import UserError
+from odoo.tools.translate import _
 from .consts import EXTRA_PRICE_TYPES
 
 
-class product_attribute_value(osv.osv):
+class product_attribute_value(models.Model):
     _inherit = "product.attribute.value"
 
-    def unlink(self, cr, uid, ids, context=None):
-        ctx = dict(context or {}, active_test=False)
-        product_ids = self.pool['product.supplierinfo'].search(cr, uid, [('attribute_value_ids', 'in', ids)], context=ctx)
+    @api.multi
+    def unlink(self):
+        product_ids = self.env['product.supplierinfo'].with_context(active_test=False).search([('attribute_value_ids', 'in', self.ids)])
         if product_ids:
             raise UserError(_('The operation cannot be completed:\nYou are trying to delete an attribute value with a reference on a product supplier variant.'))
-        return super(product_attribute_value, self).unlink(cr, uid, ids, context=context)
+        return super(product_attribute_value, self).unlink()
 
-    _columns = {
-        'price_extra_type': fields.selection(EXTRA_PRICE_TYPES,
-                                             string='Price Extra Type',
-                                             required=True,
-                                             default='standard'),
-        'supplier_ids': fields.many2many('product.supplierinfo', id1='att_id', id2='prod_id', string='Variants', readonly=True),
-    }
+    price_extra_type = fields.Selection(EXTRA_PRICE_TYPES,
+                                        string='Price Extra Type',
+                                        required=True,
+                                        default='standard'),
+    supplier_ids = fields.Many2many('product.supplierinfo', id1='att_id', id2='prod_id', string='Variants', readonly=True),

@@ -22,10 +22,10 @@
 
 from psycopg2 import OperationalError
 from datetime import datetime
-from openerp.tools import DEFAULT_SERVER_DATETIME_FORMAT
-from openerp.tools.translate import _
-from openerp import models, fields, api, SUPERUSER_ID
-from openerp.exceptions import ValidationError
+from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
+from odoo.tools.translate import _
+from odoo import models, fields, api, SUPERUSER_ID
+from odoo.exceptions import ValidationError
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -185,4 +185,3 @@ class procurement_order(models.Model):
                 vals = procurement._prepare_purchase_order_line(po, supplier)
                 self.env['purchase.order.line'].create(vals)
         return res
-

@@ -28,4 +28,6 @@
         'views/inherited_product_product_views.xml',
         'views/inherited_product_category_views.xml',
     ],
+
+    'installable': False,
 }

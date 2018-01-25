@@ -20,8 +20,8 @@
 #
 ##############################################################################
 
-from openerp import models, fields, api
-import openerp.addons.decimal_precision as dp
+from odoo import models, fields, api
+import odoo.addons.decimal_precision as dp
 from .consts import EXTRA_PRICE_TYPES
 
 

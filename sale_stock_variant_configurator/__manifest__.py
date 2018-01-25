@@ -15,6 +15,6 @@
               "Odoo Community Association (OCA)",
     "category": "Sales Management",
     "website": "https://www.tecnativa.com",
-    "installable": True,
-    "auto_install": True,
+    "installable": False,
+    "auto_install": False,
 }

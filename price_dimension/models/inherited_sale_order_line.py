@@ -20,10 +20,10 @@
 #
 ##############################################################################
 
-from openerp import models, fields, api, exceptions
-from openerp.exceptions import ValidationError
-from openerp.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
-from openerp.tools.translate import _
+from odoo import models, fields, api, exceptions
+from odoo.exceptions import ValidationError
+from odoo.tools import float_is_zero, float_compare, DEFAULT_SERVER_DATETIME_FORMAT
+from odoo.tools.translate import _
 import logging
 _logger = logging.getLogger(__name__)
 
@@ -170,4 +170,3 @@ class sale_order_line(models.Model):
                 height=line.origin_height).run()
             new_procs += new_proc
         return new_procs
-

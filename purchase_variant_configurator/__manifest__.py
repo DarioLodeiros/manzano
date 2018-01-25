@@ -23,6 +23,6 @@
         "views/inherited_purchase_order_views.xml",
         "views/inherited_product_product_views.xml"
     ],
-    "installable": True,
+    "installable": False,
     "post_init_hook": "assign_product_template",
 }

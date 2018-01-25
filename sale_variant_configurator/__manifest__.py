@@ -21,6 +21,6 @@
     "data": [
         "views/sale_view.xml",
     ],
-    "installable": True,
+    "installable": False,
     "post_init_hook": "assign_product_template",
 }

@@ -20,4 +20,6 @@
     ],
     'demo': [
     ],
+
+    'installable': False,
 }
