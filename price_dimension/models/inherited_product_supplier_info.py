@@ -75,8 +75,8 @@ class product_supplier_info(models.Model):
         inverse_name='supplierinfo_id'
     )
 
-    price_extra = fields.Float(compute='_get_price_extra', string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits_compute=dp.get_precision('Product Price'))
-    price_extra_perc = fields.Float(compute='_get_price_extra_percentage', string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits_compute=dp.get_precision('Product Price'))
+    price_extra = fields.Float(compute='_get_price_extra', string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits=dp.get_precision('Product Price'))
+    price_extra_perc = fields.Float(compute='_get_price_extra_percentage', string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits=dp.get_precision('Product Price'))
 
     def get_price_table_headers(self):
         result = {'x': [0], 'y': [0]}

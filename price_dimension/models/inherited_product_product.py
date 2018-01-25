@@ -162,7 +162,7 @@ class product_product(models.Model):
             result = price_extra
         return result
 
-    price_extra = fields.Float(compute=_get_price_extra, string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits_compute=dp.get_precision('Product Price')),
-    lst_price = fields.Float(compute=_compute_lst_price, inverse=_set_product_lst_price, string='Sale Price', digits_compute=dp.get_precision('Product Price')),
+    price_extra = fields.Float(compute=_get_price_extra, string='Variant Extra Price', help="This is the sum of the extra price of all attributes", digits=dp.get_precision('Product Price'))
+    lst_price = fields.Float(compute=_compute_lst_price, inverse=_set_product_lst_price, string='Sale Price', digits=dp.get_precision('Product Price'))
 
-    price_extra_perc = fields.Float(compute=_get_price_extra_percentage, string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits_compute=dp.get_precision('Product Price')),
+    price_extra_perc = fields.Float(compute=_get_price_extra_percentage, string='Variant Extra Price Percentage', help="This is the percentage of the extra price of all attributes", digits=dp.get_precision('Product Price'))

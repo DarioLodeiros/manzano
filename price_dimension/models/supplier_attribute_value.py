@@ -37,7 +37,7 @@ class supplier_attribute_value(models.Model):
         string='Attribute')
     price_extra = fields.Float(
         string='Supplier Price Extra',
-        digits_compute=dp.get_precision('Product Price'),
+        digits=dp.get_precision('Product Price'),
         default=0.0)
 
     price_extra_type = fields.Selection(EXTRA_PRICE_TYPES,
